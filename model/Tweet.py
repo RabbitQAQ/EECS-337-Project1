@@ -1,7 +1,7 @@
 from model.User import User
 
 
-class Twitter:
+class Tweet:
     def __init__(self, input_text, input_timestamp_ms, input_id, input_sceen_name, input_tweet_id):
         self.text = input_text
         self.timestamp_ms = input_timestamp_ms
@@ -19,3 +19,5 @@ class Twitter:
 
     def get_id(self):
         return self.id
+
+    #comment test
