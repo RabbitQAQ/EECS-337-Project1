@@ -11,6 +11,9 @@ The collectionName can be "gg2013" or "gg2015" depending on the data you read
 readDBIntoTweetList(collectionName) can help you search db and convert the contents into a list of Tweet
 Also you need to specify the collectionName because we will have 2 MongoDB Collection(gg2013 and gg2015)
 
+In order to use those functions, you need to install pymongo, just use pip and follow the instruction here:
+https://api.mongodb.com/python/current/installation.html
+
 If you need to install MongoDB, you can follow the instruction:
 https://docs.mongodb.com/manual/tutorial/install-mongodb-on-os-x/
 
