@@ -9,7 +9,7 @@ from spiders.ggspider import year
 
 class GgcrawlerPipeline(object):
     def process_item(self, item, spider):
-        f = open('../AwardCategories' + year + '.txt', 'a+')
+        f = open('../data/AwardCategories' + year + '.txt', 'a+')
         f.write(item['category'] + '\n')
         f.close()
         return item
