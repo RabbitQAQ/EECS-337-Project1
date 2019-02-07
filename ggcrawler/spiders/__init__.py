@@ -5,6 +5,6 @@
 from spiders.ggspider import year
 
 # clean file
-f = open('../AwardCategories' + year + '.txt', 'w+')
+f = open('../data/AwardCategories' + year + '.txt', 'w+')
 f.write('')
 f.close()

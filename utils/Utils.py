@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # If you are importing gg2013.json, the second parameter should be gg2013.
     # If importing gg2015.json, then please change it to gg2015.
     # gg2013 is much smaller and suitable for testing.
-    readJsonIntoDB('../data/gg2013.json', "gg2013")
+    readJsonIntoDB('../data/gg2015.json', "gg2015")
 
     # An example for read contents from db
-    tweetList = readDBIntoTweetList("gg2013")
+    #tweetList = readDBIntoTweetList("gg2013")

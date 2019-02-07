@@ -2,7 +2,7 @@ from scrapy import Spider
 
 from ggcrawler.items import CategoryItem
 
-year = "2013"
+year = "2015"
 
 class GlodenGlobesSpider(Spider):
     name = 'gloden_globes'
