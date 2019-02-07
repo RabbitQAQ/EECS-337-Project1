@@ -22,3 +22,7 @@ Note that our db name is nlpTeamJJC(Jaieu, Jiawei and Chenbo), not local/config/
 Don't worry, just a note, simply execute readJsonIntoDB() is fine.
 
 If you use pycharm, you can search for a plugin called "Mongo Plugin", a GUI tool for MongoDB
+
+# update 02/07 -- Chenbo
+
+added find winner function. The running time is 5 mins, so it need to be improved. It can get reliable result in 2013 data, not sure how it perform in 2015 data
