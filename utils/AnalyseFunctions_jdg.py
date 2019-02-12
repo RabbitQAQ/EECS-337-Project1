@@ -47,7 +47,7 @@ def tweetsCleaner(tweetList):
 
     return cleanedTweetList
 
-cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2015"))
+cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2013"))
 
 
 print(len(cleanedTweetList))
@@ -114,7 +114,7 @@ def findwinner(i):
     awardstring = awardstring.replace('limited', 'mini')
     catagorystring = catagoryString.lower()
     Ismovie = 1
-    if 'actor' in awardstring or 'actress' in awardstring or 'director' in awardstring or 'srceenplay' in awardstring or 'cecil' in awardstring:
+    if 'actor' in awardstring or 'actress' in awardstring or 'director' in awardstring or 'srceenplay' in awardstring or 'cecil' in awardstring or 'score' in awardstring:
         Ismovie = 0
     # awardWords = tweetTokenizer.tokenize(awardstring)
     # categorywords = tweetTokenizer.tokenize(catagorystring)
@@ -139,24 +139,25 @@ def findwinner(i):
     winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]
 
     diff = (sortedDict[0][1] - sortedDict[1][1]) / sortedDict[0][1]
-    if Ismovie == 0 and diff < 0.05:
+    if Ismovie == 0 and diff < 0.10:
         file1 = open(datapath + "/name2013.txt")
         names = file1.read().split("\n")
         n0 = 0
         n1 = 0
         for name in names:
-            if sortedDict[0][0][0] in name or sortedDict[0][0][1] in name:
+            name = name.lower()
+            if sortedDict[0][0][0] in name and sortedDict[0][0][1] in name:
                 n0 += 1
-            if sortedDict[1][0][0] in name or sortedDict[1][0][1] in name:
+            if sortedDict[1][0][0] in name and sortedDict[1][0][1] in name:
                 n1 += 1
 
         if n1 > n0:
             winner = sortedDict[1][0][0] + ' ' + sortedDict[1][0][1]
 
     if Ismovie == 1:
-        if diff < 0.05 and sortedDict[0][0][0] == sortedDict[1][0][1]:
+        if diff < 0.10 and sortedDict[0][0][0] == sortedDict[1][0][1]:
             winner = sortedDict[1][0][0] + ' ' + sortedDict[1][0][1] + ' ' + sortedDict[0][0][1]
-        if diff < 0.05 and sortedDict[1][0][0] == sortedDict[0][0][1]:
+        if diff < 0.10 and sortedDict[1][0][0] == sortedDict[0][0][1]:
             winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1] + ' ' + sortedDict[1][0][1]
         if sortedDict[0][0][0] == 'wins' or sortedDict[0][0][0] == 'goes' or sortedDict[0][0][0] == 'movie' or sortedDict[0][0][0] == 'flim':
             winner = sortedDict[0][0][1]
