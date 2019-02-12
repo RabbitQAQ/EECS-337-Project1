@@ -56,11 +56,11 @@ print(len(cleanedTweetList))
 file = open(datapath + "/AwardCategories2013.txt")
 lines = file.read().split("\n")
 corpus = lines
-#将文本中的词语转换为词频矩阵
+#将文本中的词语转换为词频矩阵(word to frequency matrix)
 vectorizer = CountVectorizer()
-#计算个词语出现的次数
+#计算个词语出现的次数(calculate the times a word appears)
 X = vectorizer.fit_transform(corpus)
-#获取词袋中所有文本关键词
+#获取词袋中所有文本关键词(get every key word)
 word_tfidf = vectorizer.get_feature_names()
 print (word_tfidf)
 
@@ -68,7 +68,7 @@ print (word_tfidf)
 
 transformer = TfidfTransformer()
 
-#将词频矩阵X统计成TF-IDF值
+#将词频矩阵X统计成TF-IDF值(calculate TF-IDF )
 tfidf = transformer.fit_transform(X)
 weight=tfidf.toarray()
 
