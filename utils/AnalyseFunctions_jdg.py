@@ -1,6 +1,9 @@
 import re
 import os
+import string
+
 import nltk
+import json
 import numpy as np
 from gensim.models import word2vec
 from sklearn.feature_extraction.text import CountVectorizer
@@ -97,7 +100,8 @@ def findHost():
                         res[k] = 1
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
 
-    return sortedDict[0], sortedDict[1]
+
+    return sortedDict[0][0][0] + ' ' + sortedDict[0][0][1], sortedDict[1][0][0] + ' ' + sortedDict[1][0][1]
 
 #print(findHost())
 
@@ -167,33 +171,6 @@ def findwinner(i):
 
     return winner
 
-# def ie_preprocess(document):
-#     document = ' '.join([i for i in document.split() if i not in stopwordlist])
-#     sentences = nltk.sent_tokenize(document)
-#     sentences = [nltk.word_tokenize(sent) for sent in sentences]
-#     sentences = [nltk.pos_tag(sent) for sent in sentences]
-#     return sentences
-
-# def extract_names(document):
-#
-#     sentences = ie_preprocess(document)
-#     for tagged_sentence in sentences:
-#         for chunk in nltk.ne_chunk(tagged_sentence):
-#             if type(chunk) == nltk.tree.Tree:
-#                 if chunk.label() == 'PERSON':
-#                     na = ' '.join([c[0] for c in chunk])
-#                     if len(chunk) == 2:
-#                         if na in name:
-#                             name[na] += 1
-#                         else:
-#                             name[na] = 1
-
-# def get_name():
-#     name = {}
-#     for tweet in cleanedTweetList:
-#         extract_names(tweet)
-#     return name
-
 
 def findWinnerInNgrams(i, awardWords, categoryWords, n):
     res = {}
@@ -262,9 +239,27 @@ def findWinnerInNgrams(i, awardWords, categoryWords, n):
     return sortedDict
 
 
-for i in range (0, 26):
-    print(findwinner(i))
+# for i in range (0, 26):
+#     print(findwinner(i))
 
+def generateJson():
+    # TODO use true award name
+    file = open(datapath + "/AwardCategories2013.txt")
+    lines = file.read().split("\n")
+    jsonData = {}
+    jsonData["Host"] = []
+    hosts = findHost()
+    jsonData["Host"].append(string.capwords(hosts[0]))
+    jsonData["Host"].append(string.capwords(hosts[1]))
+    for i in range(0, 26):
+        jsonData[lines[i]] = {}
+        jsonData[lines[i]]["Presenters"] = []
+        jsonData[lines[i]]["Nominees"] = []
+        jsonData[lines[i]]["Winner"] = string.capwords(findwinner(i))
+
+    return json.dumps(jsonData)
+
+print(generateJson())
 # name = {}
 # name_final = []
 # wordtovec = []
