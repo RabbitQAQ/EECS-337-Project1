@@ -47,7 +47,9 @@ def tweetsCleaner(tweetList):
 
     return cleanedTweetList
 
-cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2013"))
+cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2015"))
+
+
 print(len(cleanedTweetList))
 
 #TF-IDF
@@ -99,7 +101,7 @@ def findHost():
 
 #print(findHost())
 
-def findwinner(i, name):
+def findwinner(i):
     file = open(datapath +"/AwardCategories2013.txt")
     lines = file.read().split("\n")
     line = lines[i]
@@ -109,7 +111,11 @@ def findwinner(i, name):
     awardString = line
     catagoryString = string[1]
     awardstring = awardString.lower()
+    awardstring = awardstring.replace('limited', 'mini')
     catagorystring = catagoryString.lower()
+    Ismovie = 1
+    if 'actor' in awardstring or 'actress' in awardstring or 'director' in awardstring or 'srceenplay' in awardstring or 'cecil' in awardstring:
+        Ismovie = 0
     # awardWords = tweetTokenizer.tokenize(awardstring)
     # categorywords = tweetTokenizer.tokenize(catagorystring)
     awardWords = [w for w in tweetTokenizer.tokenize(awardstring) if not w in stopwordlist]
@@ -120,46 +126,75 @@ def findwinner(i, name):
 
     sortedDict = {}
 
-    if len(awardWords) >= 6:
-        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 3, name)
+    if len(awardWords) >= 8:
+        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 3)
 
-    if len(awardWords) < 6 or len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 2, name)
+    if len(awardWords) < 8 or len(sortedDict) == 0:
+        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 2)
 
     if len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 1, name)
-
-    return sortedDict
-
-def ie_preprocess(document):
-    document = ' '.join([i for i in document.split() if i not in stopwordlist])
-    sentences = nltk.sent_tokenize(document)
-    sentences = [nltk.word_tokenize(sent) for sent in sentences]
-    sentences = [nltk.pos_tag(sent) for sent in sentences]
-    return sentences
-
-def extract_names(document,name):
-
-    sentences = ie_preprocess(document)
-    for tagged_sentence in sentences:
-        for chunk in nltk.ne_chunk(tagged_sentence):
-            if type(chunk) == nltk.tree.Tree:
-                if chunk.label() == 'PERSON':
-                    na = ' '.join([c[0] for c in chunk])
-                    if len(chunk) == 2:
-                        if na in name:
-                            name[na] += 1
-                        else:
-                            name[na] = 1
-
-def get_name():
-    name = {}
-    for tweet in cleanedTweetList:
-        extract_names(tweet, name)
-    return name
+        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 1)
 
 
-def findWinnerInNgrams(i, awardWords, categoryWords, n, name):
+    winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]
+
+    diff = (sortedDict[0][1] - sortedDict[1][1]) / sortedDict[0][1]
+    if Ismovie == 0 and diff < 0.05:
+        file1 = open(datapath + "/name2013.txt")
+        names = file1.read().split("\n")
+        n0 = 0
+        n1 = 0
+        for name in names:
+            if sortedDict[0][0][0] in name or sortedDict[0][0][1] in name:
+                n0 += 1
+            if sortedDict[1][0][0] in name or sortedDict[1][0][1] in name:
+                n1 += 1
+
+        if n1 > n0:
+            winner = sortedDict[1][0][0] + ' ' + sortedDict[1][0][1]
+
+    if Ismovie == 1:
+        if diff < 0.05 and sortedDict[0][0][0] == sortedDict[1][0][1]:
+            winner = sortedDict[1][0][0] + ' ' + sortedDict[1][0][1] + ' ' + sortedDict[0][0][1]
+        if diff < 0.05 and sortedDict[1][0][0] == sortedDict[0][0][1]:
+            winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1] + ' ' + sortedDict[1][0][1]
+        if sortedDict[0][0][0] == 'wins' or sortedDict[0][0][0] == 'goes' or sortedDict[0][0][0] == 'movie' or sortedDict[0][0][0] == 'flim':
+            winner = sortedDict[0][0][1]
+        if sortedDict[0][0][1] == 'wins' or sortedDict[0][0][1] == 'goes' or sortedDict[0][0][1] == 'movie' or sortedDict[0][0][1] == 'flim':
+            winner = sortedDict[0][0][0]
+
+
+    return winner
+
+# def ie_preprocess(document):
+#     document = ' '.join([i for i in document.split() if i not in stopwordlist])
+#     sentences = nltk.sent_tokenize(document)
+#     sentences = [nltk.word_tokenize(sent) for sent in sentences]
+#     sentences = [nltk.pos_tag(sent) for sent in sentences]
+#     return sentences
+
+# def extract_names(document):
+#
+#     sentences = ie_preprocess(document)
+#     for tagged_sentence in sentences:
+#         for chunk in nltk.ne_chunk(tagged_sentence):
+#             if type(chunk) == nltk.tree.Tree:
+#                 if chunk.label() == 'PERSON':
+#                     na = ' '.join([c[0] for c in chunk])
+#                     if len(chunk) == 2:
+#                         if na in name:
+#                             name[na] += 1
+#                         else:
+#                             name[na] = 1
+
+# def get_name():
+#     name = {}
+#     for tweet in cleanedTweetList:
+#         extract_names(tweet)
+#     return name
+
+
+def findWinnerInNgrams(i, awardWords, categoryWords, n):
     res = {}
 
     for tweet in cleanedTweetList:
@@ -202,32 +237,32 @@ def findWinnerInNgrams(i, awardWords, categoryWords, n, name):
                                     res[k] = sum
 
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
-    sortedDictname = sorted(name.items(), key=lambda entry: entry[1], reverse=True)
-    model = word2vec.Word2Vec.load("model1")
-    y1 = model.most_similar(sortedDict[0][0][0], topn=30)
-    y2 = model.most_similar(sortedDict[0][0][1], topn=30)
+    # sortedDictname = sorted(name.items(), key=lambda entry: entry[1], reverse=True)
+    # model = word2vec.Word2Vec.load("model1")
+    # y1 = model.most_similar(sortedDict[0][0][0], topn=30)
+    # y2 = model.most_similar(sortedDict[0][0][1], topn=30)
+    #
+    # for i in y1:
+    #     for key, value in name.items():
+    #         if i[0] in key.lower() and value > 10:
+    #             keyl = key.lower()
+    #             keyw = keyl.split(" ")
+    #             temp = model.most_similar(keyw[0], topn=10)
+    #             if model.similarity(keyw[0], keyw[1]) >= temp[1][1]:
+    #                 print(key)
+    # for i in y2:
+    #     for key, value in name.items():
+    #         if i[0] in key.lower() and value > 10:
+    #             keyl = key.lower()
+    #             keyw = keyl.split(" ")
+    #             temp = model.most_similar(keyw[0], topn=10)
+    #             if model.similarity(keyw[0], keyw[1]) >= temp[1][1]:
+    #                 print(key)
+    return sortedDict
 
-    for i in y1:
-        for key, value in name.items():
-            if i[0] in key.lower() and value > 10:
-                keyl = key.lower()
-                keyw = keyl.split(" ")
-                temp = model.most_similar(keyw[0], topn=10)
-                if model.similarity(keyw[0], keyw[1]) >= temp[1][1]:
-                    print(key)
-    for i in y2:
-        for key, value in name.items():
-            if i[0] in key.lower() and value > 10:
-                keyl = key.lower()
-                keyw = keyl.split(" ")
-                temp = model.most_similar(keyw[0], topn=10)
-                if model.similarity(keyw[0], keyw[1]) >= temp[1][1]:
-                    print(key)
-    return sortedDict[0], sortedDict[1], sortedDictname
 
-# name = get_name()
-# for i in range (5,6):
-#     print(findwinner(i,name))
+for i in range (0, 26):
+    print(findwinner(i))
 
 # name = {}
 # name_final = []
@@ -261,11 +296,11 @@ def findWinnerInNgrams(i, awardWords, categoryWords, n, name):
 # model.save("model2")
 # #
 model = word2vec.Word2Vec.load("model2")
-y1 = model.most_similar("kathryn", topn=10)
-y2 = model.most_similar("david", topn=10)
-y3 = model.most_similar("tommy", topn=10)
-y4 = model.most_similar("danny", topn=10)
-print(y3,y4,y1,y2)
+# y1 = model.most_similar("kathryn", topn=10)
+# y2 = model.most_similar("david", topn=10)
+# y3 = model.most_similar("tommy", topn=10)
+# y4 = model.most_similar("danny", topn=10)
+# print(y3,y4,y1,y2)
 # # 20个最相关的
 # for i in y1:
 #     for key, value in name.items():
