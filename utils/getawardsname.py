@@ -122,4 +122,62 @@ def findawardsname():
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     return sortedDict
 
-print(findawardsname())
+# print(findawardsname())
+
+
+def getjoke():
+    res = {}
+    ans = []
+    k = 12
+    jokeword =['joke', 'lmao', 'lol', 'hhh', 'funny']
+    for tweet in cleanedTweetList:
+        tweet_l = tweet.lower()
+        for jw in jokeword:
+            if jw in tweet_l:
+                tokens = tweetTokenizer.tokenize(tweet_l)
+                usefulTokens = [w for w in tokens if not w in customizedStopwords]
+                for joke in nltk.ngrams(usefulTokens, k):
+                    if joke in res:
+                        res[joke] += 1
+                    else:
+                        res[joke] = 1
+    sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
+
+    start = 1
+    flag = 0
+    temp_joke = []
+    for i in range (0, len(sortedDict) - 1):
+        if flag == 0:
+            start = 1
+            if len(temp_joke) != 0:
+                joketonight = ''
+                for word in temp_joke:
+                    joketonight += word + ' '
+                ans.append(joketonight)
+
+            temp_joke = []
+        if flag == 1:
+            start == 0
+        if start == 1:
+            for tw in sortedDict[i][0]:
+                temp_joke.append(tw)
+
+            start = 0
+            flag = 1
+
+        for j in range (1, k):
+            if sortedDict[i][0][j] != sortedDict[i + 1][0][j - 1] or sortedDict[i + 1][1] < 5:
+                flag = 0
+
+
+        if flag == 1:
+             temp_joke.append(sortedDict[i + 1][0][k - 1])
+
+
+    return ans[0: 10]
+
+ans = getjoke()
+
+for joke in ans:
+    print(joke)
+
