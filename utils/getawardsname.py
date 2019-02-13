@@ -42,12 +42,12 @@ def tweetsCleaner(tweetList):
         if not retweetCleanerRE.search(sentences[0]):
             for s in sentences:
                 if keywordsCleanerRE.search(s):
-                    cleanedTweet = re.sub("[^a-zA-Z0-9 ]", "", tweet.get_text())
+                    cleanedTweet = re.sub("[^a-zA-Z0-9- ]", "", tweet.get_text())
                     cleanedTweetList.append(cleanedTweet)
 
     return cleanedTweetList
 
-cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2013"))
+cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2015"))
 
 
 print(len(cleanedTweetList))
@@ -122,26 +122,35 @@ def findawardsname():
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     return sortedDict
 
-# print(findawardsname())
+print(findawardsname())
 
 
 def getjoke():
     res = {}
+    whosaid = {}
     ans = []
-    k = 12
-    jokeword =['joke', 'lmao', 'lol', 'hhh', 'funny']
+    k = 10
+    jokeword =['joke', 'lmao', 'lol', 'hhh', 'funny', '233']
+
     for tweet in cleanedTweetList:
         tweet_l = tweet.lower()
         for jw in jokeword:
             if jw in tweet_l:
                 tokens = tweetTokenizer.tokenize(tweet_l)
                 usefulTokens = [w for w in tokens if not w in customizedStopwords]
+                for who in nltk.ngrams(usefulTokens, 2):
+                    if who in whosaid:
+                        whosaid[who] += 1
+                    else:
+                        whosaid[who] = 1
+
                 for joke in nltk.ngrams(usefulTokens, k):
                     if joke in res:
                         res[joke] += 1
                     else:
                         res[joke] = 1
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
+    whosaid = sorted(whosaid.items(), key=lambda entry: entry[1], reverse=True)
 
     start = 1
     flag = 0
@@ -174,10 +183,11 @@ def getjoke():
              temp_joke.append(sortedDict[i + 1][0][k - 1])
 
 
-    return ans[0: 10]
+    return ans[0: 10], whosaid
 
-ans = getjoke()
+ans, who = getjoke()
 
 for joke in ans:
     print(joke)
+print(who[0][0])
 
