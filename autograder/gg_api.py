@@ -53,6 +53,35 @@ def tweetsCleaner(tweetList):
 
     return cleanedTweetList
 
+cleanedTweets2013 = tweetsCleaner(readDBIntoTweetList("gg2013"))
+#cleanTweets2015 = tweetsCleaner(readDBIntoTweetList("gg2015"))
+
+def findHost():
+    hostWords = ["host", "hosts", "hosting"]
+    dict = {}
+    res = []
+    for tweet in cleanedTweets2013:
+        for hw in hostWords:
+            if hw in tweet:
+                tmp = tweet.lower()
+                tokens = tweetTokenizer.tokenize(tmp)
+                usefulTokens = [w for w in tokens if not w in stopwordlist]
+                for k in nltk.bigrams(usefulTokens):
+                    if k in dict:
+                        dict[k] += 1
+                    else:
+                        dict[k] = 1
+    sortedDict = sorted(dict.items(), key=lambda entry: entry[1], reverse=True)
+
+    if sortedDict[0][1] / sortedDict[1][1] >= 0.8:
+        res.append(string.capwords(sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]))
+        res.append(string.capwords(sortedDict[1][0][0] + ' ' + sortedDict[1][0][1]))
+    else:
+        res.append(string.capwords(sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]))
+
+    return res
+
+
 def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
     line = lines[i]
     string = line.split("-")
@@ -161,6 +190,79 @@ def findWinnerInNgrams(cleanedTweetList, i, awardWords, categoryWords, word_tfid
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     return sortedDict
 
+def findawardsname():
+    res = {}
+    temp_len = 0
+    for tweet in cleanedTweets2013:
+        temp_len = 0
+        tweet_l = tweet.lower()
+        if 'best' in tweet_l:
+            if 'comedy' in tweet_l:
+                award_index0 = tweet_l.find('best')
+                award_index1 = tweet_l.find('comedy')
+                award = tweet_l[award_index0:award_index1 + 6]
+                tokens = tweetTokenizer.tokenize(award)
+                if len(tokens) >= 4:
+
+                    if len(tokens) > temp_len:
+                        temp_len = max(temp_len, len(tokens))
+                        a_i0 = award_index0
+                        a_i1 = award_index1 + 6
+
+        if 'best' in tweet_l:
+            if 'drama' in tweet_l:
+                award_index0 = tweet_l.find('best')
+                award_index1 = tweet_l.find('drama')
+                award = tweet_l[award_index0:award_index1 + 5]
+                tokens = tweetTokenizer.tokenize(award)
+                if len(tokens) >= 4:
+
+                    if len(tokens) > temp_len:
+                        temp_len = max(temp_len, len(tokens))
+                        a_i0 = award_index0
+                        a_i1 = award_index1 + 5
+
+        if 'best' in tweet_l:
+            if 'picture' in tweet_l:
+                award_index0 = tweet_l.find('best')
+                award_index1 = tweet_l.find('picture')
+                award = tweet_l[award_index0:award_index1 + 7]
+                tokens = tweetTokenizer.tokenize(award)
+                if len(tokens) >= 4:
+
+                    if len(tokens) > temp_len:
+                        temp_len = max(temp_len, len(tokens))
+                        a_i0 = award_index0
+                        a_i1 = award_index1 + 7
+
+        if 'best' in tweet_l:
+            if 'television' in tweet_l:
+                award_index0 = tweet_l.find('best')
+                award_index1 = tweet_l.find('television')
+                award = tweet_l[award_index0:award_index1 + 10]
+                tokens = tweetTokenizer.tokenize(award)
+                if len(tokens) >= 4:
+
+                    if len(tokens) > temp_len:
+                        temp_len = max(temp_len, len(tokens))
+                        a_i0 = award_index0
+                        a_i1 = award_index1 + 10
+
+        if temp_len >= 4:
+            award = tweet_l[a_i0: a_i1]
+            if award in res:
+                res[award] += 1
+            else:
+                res[award] = 1
+
+
+    sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
+
+    trueResult = []
+    for i in range(0, 26):
+        trueResult.append(sortedDict[i][0])
+    return trueResult
+
 # Autograder
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
@@ -169,13 +271,16 @@ def get_hosts(year):
     '''Hosts is a list of one or more strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
-    return []
+    # cleanedTweets = tweetsCleaner(readDBIntoTweetList('gg2013'))
+    res = findHost()
+    return res
 
 def get_awards(year):
     '''Awards is a list of strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
-    return []
+
+    return findawardsname()
 
 def get_nominees(year):
     '''Nominees is a dictionary with the hard coded award
@@ -214,14 +319,13 @@ def get_winner(year):
     # Calculate TF-IDF
     tfidf = transformer.fit_transform(X)
     weight = tfidf.toarray()
-    cleanedTweets = tweetsCleaner(readDBIntoTweetList('gg2013'))
     ############################################ PREPROCESS END
     res = {}
     # for award in OFFICIAL_AWARDS_1315:
     #     res[award] = ''
     if year == '2013':
         for i in range(0, len(lines)):
-            res[lines[i]] = string.capwords(findwinner(cleanedTweets, lines, i, word_tfidf, weight))
+            res[lines[i]] = string.capwords(findwinner(cleanedTweets2013, lines, i, word_tfidf, weight))
     return res
 
 def get_presenters(year):
@@ -244,36 +348,6 @@ def pre_ceremony():
     plain text file. It is the first thing the TA will run when grading.
     Do NOT change the name of this function or what it returns.'''
     # Your code here
-    # Clean Tweet
-    global cleanedTweetList
-    global word_tfidf
-    global weight
-    cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2013"))
-    # TF-IDF
-    file = open(datapath + "/AwardCategories2013.txt")
-    lines = file.read().split("\n")
-    corpus = lines
-    # Word to frequency matrix
-    vectorizer = CountVectorizer()
-    # Calculate the times a word appears
-    X = vectorizer.fit_transform(corpus)
-    # Get every key word
-    word_tfidf = vectorizer.get_feature_names()
-
-    transformer = TfidfTransformer()
-
-    # Calculate TF-IDF
-    tfidf = transformer.fit_transform(X)
-    weight = tfidf.toarray()
-
-    for wi in range(0, len(weight[0])):
-        count = 0
-        for wj in range(0, len(weight)):
-            if weight[wj][wi] != 0:
-                count += 1
-                temp = wj
-        if count == 1:
-            weight[temp][wi] *= 10
     print("Pre-ceremony processing complete.")
     return
 
