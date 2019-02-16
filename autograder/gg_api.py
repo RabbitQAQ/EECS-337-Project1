@@ -15,7 +15,7 @@ from utils import Utils
 from utils.Utils import readDBIntoTweetList, readDBIntoTweetListToString
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
-from imdb import IMDb
+
 
 ## Tokenizers
 # break tweets into sentences
@@ -47,11 +47,33 @@ def tweetsCleaner(tweetList):
         if not retweetCleanerRE.search(sentences[0]):
             for s in sentences:
                 if keywordsCleanerRE.search(s):
-                    cleanedTweet = re.sub("[^a-zA-Z0-9- ]", "", tweet.get_text())
+                    cleanedTweet = re.sub("[^a-zA-Z0-9-, ]", "", tweet.get_text())
                     cleanedTweetList.append(cleanedTweet)
                 break
 
     return cleanedTweetList
+
+def award_classifier(tweet_tokens, award_categories, aw):
+    best_score = 0
+    best_category = ""
+    for award in award_categories:
+        awardstring = award.lower()
+        awardstring = awardstring.replace('limited', 'mini')
+        awardWords = [w for w in tweetTokenizer.tokenize(awardstring) if not w in stopwordlist]
+        score = num_matches(awardWords, tweet_tokens)
+        if score > best_score and score > 0:
+            best_score = score
+            best_category = award
+
+        if best_category == aw:
+            return True
+    return False
+
+def num_matches(list1, list2):
+    matches = 0
+    for item in list1:
+        matches += list2.count(item)
+    return matches
 
 def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
     line = lines[i]
@@ -75,13 +97,14 @@ def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
     sortedDict = {}
 
     if len(awardWords) >= 8:
-        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 3)
+        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1, lines, line)
 
     if len(awardWords) < 8 or len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 2)
+        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 2, lines, line)
 
     if len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1)
+        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1, lines, line)
+
 
 
     winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]
@@ -116,7 +139,7 @@ def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
     return winner
 
 
-def findWinnerInNgrams(cleanedTweetList, i, awardWords, categoryWords, word_tfidf, weight, n):
+def findWinnerInNgrams(cleanedTweetList, i, awardWords, categoryWords, word_tfidf, weight, n, lines, line):
     res = {}
 
     for tweet in cleanedTweetList:
@@ -142,21 +165,22 @@ def findWinnerInNgrams(cleanedTweetList, i, awardWords, categoryWords, word_tfid
 
                         tokens = tweetTokenizer.tokenize(tweet_l)
                         usefulTokens = [w for w in tokens if not w in stopwordlist]
-                        aw_pos = []
-                        for tw in aw:
-                            try:
-                                aw_pos.append(word_tfidf.index(tw))
-                            except:
-                                aw_pos.append(0)
-                        for k in nltk.bigrams(usefulTokens):
-                            if k[0] not in awardWords and k[1] not in awardWords:
-                                sum = 1
-                                for tp in aw_pos:
-                                    sum *= weight[i][tp]
-                                if k in res:
-                                    res[k] += sum
-                                else:
-                                    res[k] = sum
+                        if award_classifier(usefulTokens, lines, line):
+                            aw_pos = []
+                            for tw in aw:
+                                try:
+                                    aw_pos.append(word_tfidf.index(tw))
+                                except:
+                                    aw_pos.append(0)
+                            for k in nltk.bigrams(usefulTokens):
+                                if k[0] not in awardWords and k[1] not in awardWords:
+                                    sum = 1
+                                    for tp in aw_pos:
+                                        sum *= weight[i][tp]
+                                    if k in res:
+                                        res[k] += sum
+                                    else:
+                                        res[k] = sum
 
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     return sortedDict
@@ -214,12 +238,12 @@ def get_winner(year):
     # Calculate TF-IDF
     tfidf = transformer.fit_transform(X)
     weight = tfidf.toarray()
-    cleanedTweets = tweetsCleaner(readDBIntoTweetList('gg2013'))
+    cleanedTweets = tweetsCleaner(readDBIntoTweetList('gg2015'))
     ############################################ PREPROCESS END
     res = {}
     # for award in OFFICIAL_AWARDS_1315:
     #     res[award] = ''
-    if year == '2013':
+    if year == '2015':
         for i in range(0, len(lines)):
             res[lines[i]] = string.capwords(findwinner(cleanedTweets, lines, i, word_tfidf, weight))
     return res

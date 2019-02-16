@@ -47,7 +47,7 @@ def tweetsCleaner(tweetList):
 
     return cleanedTweetList
 
-cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2015"))
+cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2013"))
 
 
 print(len(cleanedTweetList))
@@ -58,6 +58,8 @@ def findawardsname():
     for tweet in cleanedTweetList:
         temp_len = 0
         tweet_l = tweet.lower()
+        if 'tv' in tweet_l:
+            tweet_l.replace('tv', 'television')
         if 'best' in tweet_l:
             if 'comedy' in tweet_l:
                 award_index0 = tweet_l.find('best')
@@ -111,12 +113,35 @@ def findawardsname():
                         a_i0 = award_index0
                         a_i1 = award_index1 + 10
 
-        if temp_len >= 4:
+        if temp_len >= 5:
             award = tweet_l[a_i0: a_i1]
-            if award in res:
-                res[award] += 1
-            else:
-                res[award] = 1
+            word = award.split()
+            if '-' in word or (word[-1] == 'television' or word[-1] == 'picture'):
+                if award in res:
+                    res[award] += 1
+                else:
+                    res[award] = 1
+
+                flag = 0
+                if 'actor' in word:
+                    flag = 1
+                if 'actress' in word:
+                    flag = 2
+
+                if flag == 1:
+                    award.replace('actor', 'actress')
+                    if award in res:
+                        res[award] += 1
+                    else:
+                        res[award] = 1
+                if flag == 2:
+                    award.replace('actress', 'actor')
+                    if award in res:
+                        res[award] += 1
+                    else:
+                        res[award] = 1
+
+
 
 
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
