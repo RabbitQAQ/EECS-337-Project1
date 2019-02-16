@@ -75,6 +75,7 @@ def num_matches(list1, list2):
         matches += list2.count(item)
     return matches
 
+
 def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
     line = lines[i]
     string = line.split("-")
