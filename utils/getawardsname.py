@@ -47,7 +47,7 @@ def tweetsCleaner(tweetList):
 
     return cleanedTweetList
 
-cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2013"))
+cleanedTweetList = tweetsCleaner(readDBIntoTweetList("gg2015"))
 
 
 print(len(cleanedTweetList))
@@ -147,7 +147,7 @@ def findawardsname():
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     return sortedDict
 
-print(findawardsname())
+# print(findawardsname())
 
 
 def getjoke():
@@ -207,12 +207,14 @@ def getjoke():
         if flag == 1:
              temp_joke.append(sortedDict[i + 1][0][k - 1])
 
+    who = whosaid[0][0][0] + ' ' + whosaid[0][0][1]
 
-    return ans[0: 10], whosaid
+
+    return ans[0], who
 
 ans, who = getjoke()
 
-for joke in ans:
-    print(joke)
-print(who[0][0])
+
+print(ans)
+print(who)
 
