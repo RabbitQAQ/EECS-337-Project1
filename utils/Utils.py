@@ -1,5 +1,6 @@
 import json
 import csv
+import re
 
 from pymongo import MongoClient
 from difflib import SequenceMatcher
@@ -16,9 +17,9 @@ def readJsonIntoDB(filepath, collectionName):
             collection = db[collectionName]
             collection.insert(data)
     except:
-        print("Read Json Into DB: Operation Failed")
+        print("Read Json Into DB: Operation Failed(" + collectionName + ")")
     else:
-        print("Read Json Into DB: Operation Succeed")
+        print("Read Json Into DB: Operation Succeed(" + collectionName + ")")
 
 # Return a list of Tweet read from db
 def readDBIntoTweetList(collectionName):
@@ -33,6 +34,44 @@ def readDBIntoTweetList(collectionName):
         tmpTweet = Tweet(item['text'], item['timestamp_ms'], item['user']['id'], item['user']['screen_name'],
                          item['id'])
         res.append(tmpTweet)
+
+    # Return a list of Tweet
+    return res
+
+def readJsonIntoTweetList(filepath):
+    res = []
+    cnt = 0
+    try:
+        with open(filepath) as jsonfile:
+            data = json.loads(jsonfile.read())
+            for item in data:
+                cnt += 1
+                print(cnt)
+                tmpTweet = Tweet(re.sub("[^a-zA-Z0-9-, ]", "", item['text']), item['timestamp_ms'], item['user']['id'], item['user']['screen_name'],
+                                 item['id'])
+                res.append(tmpTweet)
+    except:
+        print("Read Json Into List: Operation Failed(" + filepath+ ")")
+    else:
+        print("Read Json Into List: Operation Succeed(" + filepath + ")")
+
+    # Return a list of Tweet
+    return res
+
+def readJsonIntoTweetListToString(filepath):
+    res = []
+    cnt = 0
+    try:
+        with open(filepath) as jsonfile:
+            data = json.loads(jsonfile.read())
+            for item in data:
+                cnt += 1
+                print(cnt)
+                res.append(re.sub("[^a-zA-Z0-9-, ]", "", item['text']))
+    except:
+        print("Read Json Into List: Operation Failed(" + filepath+ ")")
+    else:
+        print("Read Json Into List: Operation Succeed(" + filepath + ")")
 
     # Return a list of Tweet
     return res
@@ -101,4 +140,6 @@ if __name__ == '__main__':
 
     #tsv_parser('../data/name.basics.tsv')
 
-    print(find_most_similar('Dssd Edasdas'))
+    #print(find_most_similar('Dssd Edasdas'))
+    readJsonIntoTweetListToString('../data/gg2015.json')
+    print("fuck")

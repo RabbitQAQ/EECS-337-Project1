@@ -3,6 +3,7 @@
 import re
 import os
 import string
+from collections import Counter
 
 import nltk
 import spacy
@@ -13,19 +14,34 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 
 from utils import Utils
-from utils.Utils import readDBIntoTweetList, readDBIntoTweetListToString
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
-
+from nltk.util import ngrams
 
 ## Tokenizers
 # break tweets into sentences
+from utils.Utils import readJsonIntoTweetListToString
+
+# Set file path
+FILEPATH_2013 = '../data/gg2013.json'
+FILEPATH_2015 = '../data/gg2015.json'
+FILEPATH_2018 = '../data/gg2018.json'
+FILEPATH_2019 = '../data/gg2019.json'
+
+cleanedTweets2013 = []
+cleanedTweets2015 = []
+cleanedTweets2018 = []
+cleanedTweets2019 = []
+
+ourWinners = {}
+
 sentDetector = nltk.data.load('tokenizers/punkt/english.pickle')
 # tweet tokenizer
 tweetTokenizer = TweetTokenizer()
 
 # Keywords && stopwords
-keywords = ['hosting', "host", "hosts", 'won', 'best', 'winner', 'wins', 'presented', 'presenter', 'dressed', 'dress', 'best-dressed',
+keywords = ['hosting', "host", "hosts", 'won', 'best', 'winner', 'wins', 'presented', 'presenter', 'dressed', 'dress',
+            'best-dressed',
             'suit', 'win', 'limited']
 nominee_keywords = ['nominee', 'nominees', 'who', 'which']
 customizedStopwords = ['golden', 'globe', 'globes', 'goldenglobes', 'goldenglobe', '-']
@@ -40,6 +56,7 @@ datapath = os.path.abspath(os.path.dirname(os.getcwd())) + '/data'
 
 # SpaCy
 spacyNLP = spacy.load('en')
+
 
 def tweetsCleaner(tweetList):
     cleanedTweetList = []
@@ -56,8 +73,7 @@ def tweetsCleaner(tweetList):
                 break
 
     return cleanedTweetList
-cleanedTweets2013 = tweetsCleaner(readDBIntoTweetList("gg2013"))
-#cleanTweets2015 = tweetsCleaner(readDBIntoTweetList("gg2015"))
+
 
 def award_classifier(tweet_tokens, award_categories, aw):
     best_score = 0
@@ -75,6 +91,7 @@ def award_classifier(tweet_tokens, award_categories, aw):
         return True
     return False
 
+
 def num_matches(list1, list2):
     matches = 0
     for item in list1:
@@ -82,11 +99,33 @@ def num_matches(list1, list2):
     return matches
 
 
-def findHost():
+def findHost(year):
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    tweetThisYear = []
+    if year == '2013':
+        if cleanedTweets2013 == []:
+            cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+        tweetThisYear = cleanedTweets2013
+    elif year == '2015':
+        if cleanedTweets2015 == []:
+            cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+        tweetThisYear = cleanedTweets2015
+    elif year == '2018':
+        if cleanedTweets2018 == []:
+            cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+        tweetThisYear = cleanedTweets2018
+    elif year == '2019':
+        if cleanedTweets2019 == []:
+            cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+        tweetThisYear = cleanedTweets2019
+    # Start
     hostWords = ["host", "hosts", "hosting"]
     dict = {}
     res = []
-    for tweet in cleanedTweets2013:
+    for tweet in tweetThisYear:
         for hw in hostWords:
             if hw in tweet:
                 tmp = tweet.lower()
@@ -107,7 +146,9 @@ def findHost():
 
     return res
 
+
 def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
+    # Start
     line = lines[i]
     string = line.split("-")
     if len(string) == 1:
@@ -129,14 +170,16 @@ def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
     sortedDict = {}
 
     if len(awardWords) >= 8:
-        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1, lines, line)
+        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1, lines,
+                                        line)
 
     if len(awardWords) < 8 or len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 2, lines, line)
+        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 2, lines,
+                                        line)
 
     if len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1, lines, line)
-
+        sortedDict = findWinnerInNgrams(cleanedTweetList, i, awardWords, categorywords, word_tfidf, weight, 1, lines,
+                                        line)
 
     try:
         winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]
@@ -164,11 +207,12 @@ def findwinner(cleanedTweetList, lines, i, word_tfidf, weight):
             winner = sortedDict[1][0][0] + ' ' + sortedDict[1][0][1] + ' ' + sortedDict[0][0][1]
         if diff < 0.10 and sortedDict[1][0][0] == sortedDict[0][0][1]:
             winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1] + ' ' + sortedDict[1][0][1]
-        if sortedDict[0][0][0] == 'wins' or sortedDict[0][0][0] == 'goes' or sortedDict[0][0][0] == 'movie' or sortedDict[0][0][0] == 'flim':
+        if sortedDict[0][0][0] == 'wins' or sortedDict[0][0][0] == 'goes' or sortedDict[0][0][0] == 'movie' or \
+                sortedDict[0][0][0] == 'flim':
             winner = sortedDict[0][0][1]
-        if sortedDict[0][0][1] == 'wins' or sortedDict[0][0][1] == 'goes' or sortedDict[0][0][1] == 'movie' or sortedDict[0][0][1] == 'flim':
+        if sortedDict[0][0][1] == 'wins' or sortedDict[0][0][1] == 'goes' or sortedDict[0][0][1] == 'movie' or \
+                sortedDict[0][0][1] == 'flim':
             winner = sortedDict[0][0][0]
-
 
     return winner
 
@@ -219,10 +263,33 @@ def findWinnerInNgrams(cleanedTweetList, i, awardWords, categoryWords, word_tfid
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     return sortedDict
 
-def findawardsname():
+
+def findawardsname(year):
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    tweetThisYear = []
+    if year == '2013':
+        if cleanedTweets2013 == []:
+            cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+        tweetThisYear = cleanedTweets2013
+    elif year == '2015':
+        if cleanedTweets2015 == []:
+            cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+        tweetThisYear = cleanedTweets2015
+    elif year == '2018':
+        if cleanedTweets2018 == []:
+            cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+        tweetThisYear = cleanedTweets2018
+    elif year == '2019':
+        if cleanedTweets2019 == []:
+            cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+        tweetThisYear = cleanedTweets2019
+    # Start
     res = {}
     temp_len = 0
-    for tweet in cleanedTweets2013:
+    for tweet in tweetThisYear:
         temp_len = 0
         tweet_l = tweet.lower()
         if 'tv' in tweet_l:
@@ -239,7 +306,6 @@ def findawardsname():
                         temp_len = max(temp_len, len(tokens))
                         a_i0 = award_index0
                         a_i1 = award_index1 + 6
-
 
         if 'best' in tweet_l:
             if 'drama' in tweet_l:
@@ -308,42 +374,52 @@ def findawardsname():
                     else:
                         res[award] = 1
 
-
-
-
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
 
     trueResult = []
-    for i in range(0, 26):
+    for i in range(0, 23):
         trueResult.append(sortedDict[i][0])
     return trueResult
-# def findPresenter():
-#     presenters = dict()
-#     presenters_tweets = []
-#     presenter_words = ['present', 'presents', 'presenting','presenter','presented' 'Present', 'Presenter', 'Presenting', 'Presented', 'Presents']
-#     #generic words that are likely to appear that will not be human names
-#     final_stopwords = ['Fair', 'Best', 'She', 'He', 'Hooray' 'Supporting', 'Actor', 'Actress', 'The', 'A', 'Bad', 'Good', 'Not', 'Drinking', 'Eating', 'Dancing', 'Singing', 'And', 'Hooray', 'Nshowbiz', 'TMZ', 'VanityFair', 'Mejor', 'Better', 'Score', 'Movie', 'Film', 'Song' 'Drama', 'Comedy', 'So', 'Better', 'Netflix', 'Someone', 'Mc', 'Newz', 'Season', 'Should']
-#
-#     winners = {'cecil b. demille award' : 'Jodie Foster', 'best motion picture - drama' : 'Argo', 'best performance by an actress in a motion picture - drama' : 'Jessica Chastain', 'best performance by an actor in a motion picture - drama' : 'Daniel Day-Lewis', 'best motion picture - comedy or musical' : 'Les Miserables', 'best performance by an actress in a motion picture - comedy or musical' : 'Jennifer Lawrence', 'best performance by an actor in a motion picture - comedy or musical' : 'Hugh Jackman', 'best animated feature film' : 'Brave', 'best foreign language film' : 'Amour', 'best performance by an actress in a supporting role in a motion picture' : 'Anne Hathaway', 'best performance by an actor in a supporting role in a motion picture' : 'Christoph Waltz', 'best director - motion picture' : 'Ben Affleck', 'best screenplay - motion picture' : 'Quentin Tarantino', 'best original score - motion picture' : 'Mychael Danna', 'best original song - motion picture' : 'Skyfall', 'best television series - drama' : 'Homeland', 'best performance by an actress in a television series - drama' : 'Claire Danes', 'best performance by an actor in a television series - drama' : 'Damian Lewis', 'best television series - comedy or musical' : 'Girls', 'best performance by an actress in a television series - comedy or musical':'Lena Dunham', 'best performance by an actor in a television series - comedy or musical':'Don Cheadle', 'best mini-series or motion picture made for television':'Game Change', 'best performance by an actress in a mini-series or motion picture made for television':'Julianne Moore', 'best performance by an actor in a mini-series or motion picture made for television':'Kevin Costner', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television': 'Maggie Smith', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television': 'Ed Harris'}
-#
-#     for award in OFFICIAL_AWARDS_1315:
-#         presenters[award] = []
-#
-#     for tweet in cleanedTweets2013:
-#         if any(word in tweet for word in presenter_words):
-#             presenters_tweets.append(tweet)
 
-def findPresenter():
+
+def findPresenter(year):
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    global ourWinners
+    tweetThisYear = []
+    if year == '2013':
+        if cleanedTweets2013 == []:
+            cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+        tweetThisYear = cleanedTweets2013
+    elif year == '2015':
+        if cleanedTweets2015 == []:
+            cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+        tweetThisYear = cleanedTweets2015
+    elif year == '2018':
+        if cleanedTweets2018 == []:
+            cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+        tweetThisYear = cleanedTweets2018
+    elif year == '2019':
+        if cleanedTweets2019 == []:
+            cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+        tweetThisYear = cleanedTweets2019
+
+    # Start
     presentKeywords = ['present', 'Present', 'introduc', 'Introduc']
     resultBlackList = ['ben', 'affleck', 'clinton', 'golden', 'globe']
     presenter = {}
-    winners = {'cecil b. demille award' : 'Jodie Foster', 'best motion picture - drama' : 'Argo', 'best performance by an actress in a motion picture - drama' : 'Jessica Chastain', 'best performance by an actor in a motion picture - drama' : 'Daniel Day-Lewis', 'best motion picture - comedy or musical' : 'Les Miserables', 'best performance by an actress in a motion picture - comedy or musical' : 'Jennifer Lawrence', 'best performance by an actor in a motion picture - comedy or musical' : 'Hugh Jackman', 'best animated feature film' : 'Brave', 'best foreign language film' : 'Amour', 'best performance by an actress in a supporting role in a motion picture' : 'Anne Hathaway', 'best performance by an actor in a supporting role in a motion picture' : 'Christoph Waltz', 'best director - motion picture' : 'Ben Affleck', 'best screenplay - motion picture' : 'Quentin Tarantino', 'best original score - motion picture' : 'Mychael Danna', 'best original song - motion picture' : 'Skyfall', 'best television series - drama' : 'Homeland', 'best performance by an actress in a television series - drama' : 'Claire Danes', 'best performance by an actor in a television series - drama' : 'Damian Lewis', 'best television series - comedy or musical' : 'Girls', 'best performance by an actress in a television series - comedy or musical':'Lena Dunham', 'best performance by an actor in a television series - comedy or musical':'Don Cheadle', 'best mini-series or motion picture made for television':'Game Change', 'best performance by an actress in a mini-series or motion picture made for television':'Julianne Moore', 'best performance by an actor in a mini-series or motion picture made for television':'Kevin Costner', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television': 'Maggie Smith', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television': 'Ed Harris'}
-    # winners = get_winner('2013')
-    for k,v in winners.items():
+
+    # winners = {'cecil b. demille award' : 'Jodie Foster', 'best motion picture - drama' : 'Argo', 'best performance by an actress in a motion picture - drama' : 'Jessica Chastain', 'best performance by an actor in a motion picture - drama' : 'Daniel Day-Lewis', 'best motion picture - comedy or musical' : 'Les Miserables', 'best performance by an actress in a motion picture - comedy or musical' : 'Jennifer Lawrence', 'best performance by an actor in a motion picture - comedy or musical' : 'Hugh Jackman', 'best animated feature film' : 'Brave', 'best foreign language film' : 'Amour', 'best performance by an actress in a supporting role in a motion picture' : 'Anne Hathaway', 'best performance by an actor in a supporting role in a motion picture' : 'Christoph Waltz', 'best director - motion picture' : 'Ben Affleck', 'best screenplay - motion picture' : 'Quentin Tarantino', 'best original score - motion picture' : 'Mychael Danna', 'best original song - motion picture' : 'Skyfall', 'best television series - drama' : 'Homeland', 'best performance by an actress in a television series - drama' : 'Claire Danes', 'best performance by an actor in a television series - drama' : 'Damian Lewis', 'best television series - comedy or musical' : 'Girls', 'best performance by an actress in a television series - comedy or musical':'Lena Dunham', 'best performance by an actor in a television series - comedy or musical':'Don Cheadle', 'best mini-series or motion picture made for television':'Game Change', 'best performance by an actress in a mini-series or motion picture made for television':'Julianne Moore', 'best performance by an actor in a mini-series or motion picture made for television':'Kevin Costner', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television': 'Maggie Smith', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television': 'Ed Harris'}
+    if not year in ourWinners:
+        ourWinners[year] = get_winner(year)
+    winners = ourWinners[year]
+    for k, v in winners.items():
         presenter[k] = {}
     # Traverse tweets
-    for tweet in cleanedTweets2013:
-        #tweet = tweet.lower()
+    for tweet in tweetThisYear:
+        # tweet = tweet.lower()
         # If current tweet contains keywords
         for pk in presentKeywords:
             if pk in tweet:
@@ -409,39 +485,216 @@ def findPresenter():
         else:
             trueResult[k] = []
 
-
     return trueResult
 
+
+# ==============================NOMINEES========================================
+def ie_preprocess(document):
+    document = ' '.join([i for i in document.split()])
+    sentences = nltk.sent_tokenize(document)
+    sentences = [nltk.word_tokenize(sent) for sent in sentences]
+    sentences = [nltk.pos_tag(sent) for sent in sentences]
+    return sentences
+
+def Achive_names(tweet, winner, threshhold):
+    blacklist = ['golden', 'best', 'globe', 'motion', 'actor', 'actress', 'hero', 'picture', 'drama']
+    sum = 0
+    names = {}
+    sentences = ie_preprocess(tweet)
+    for tagged_sentence in sentences:
+        for chunk in nltk.ne_chunk(tagged_sentence):
+            if type(chunk) == nltk.tree.Tree:
+                if chunk.label() == 'PERSON':
+                    # names.append(' '.join([c[0] for c in chunk]))
+                    l = []
+                    for c in chunk[0:4]:
+                        if c[0].lower() in blacklist:
+                            break
+                        else:
+                            l.append(c[0])
+
+                    temp = ' '.join(l)
+                    if len(temp.split()) == 2:
+                        if temp not in names:
+                            sum += 1
+                            names[temp.lower()] = 1
+                        else:
+                            names[temp.lower()] += 1
+    if sum >= threshhold:
+        return names
+    return []
+
+def getMovieNom(winner, j_data):
+    winner = winner.lower()
+    f = open('../data/MovieDatabase.txt')
+    moviedic = {}
+    for i in f.read().split('\n'):
+        try:
+            k = i
+            if k:
+                moviedic[k.lower()] = 1
+        except:
+            continue
+    f.close()
+
+    sum = 0
+    movies = {}
+    movies[winner] = 1
+    sum = 0
+    for i in j_data:
+        names = []
+
+        if winner in i.lower():
+            token = nltk.word_tokenize(i.lower())
+            bigrams = ngrams(token, 2)
+            trigrams = ngrams(token, 3)
+            GG = Counter(bigrams) + Counter(trigrams)
+            for j in GG.most_common(50):
+                # print(i)
+                xx = ' '.join(k for k in j[0]).lower()
+                if 'the' in xx and len(xx.split()) < 3:
+                    continue
+                # print(xx)
+                if xx in moviedic.keys():
+                    movies[xx] = 1
+                    sum += 1
+        if sum > 10:
+            break
+
+    a = list(movies.keys())[0:6]
+    if winner in a:
+        a.remove(winner)
+    return a
+
+
+def getNominee(award, winner, j_data):
+    res = []
+    sum = 0
+    if 'actor' in award or 'actress' in award or 'performance' in award or 'director' in award or 'award' in award:
+        for i in j_data:
+            Final = {}
+
+            if winner in i.lower():
+                result1 = Achive_names(i, winner, 5)
+                if result1:
+                    a = list(result1.keys())
+                    if winner in a:
+                        a.remove(winner)
+                        return a
+        return []
+    else:
+        res = getMovieNom(winner, j_data)
+        return res
+
+
+def findNominees(year):
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    tweetThisYear = []
+    if year == '2013':
+        if cleanedTweets2013 == []:
+            cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+        tweetThisYear = cleanedTweets2013
+    elif year == '2015':
+        if cleanedTweets2015 == []:
+            cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+        tweetThisYear = cleanedTweets2015
+    elif year == '2018':
+        if cleanedTweets2018 == []:
+            cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+        tweetThisYear = cleanedTweets2018
+    elif year == '2019':
+        if cleanedTweets2019 == []:
+            cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+        tweetThisYear = cleanedTweets2019
+    # Start
+    res = {}
+    if not year in ourWinners:
+        ourWinners[year] = get_winner(year)
+    winners = ourWinners[year]
+    currAwards = []
+    if year == '2013' or year == '2015':
+        currAwards = OFFICIAL_AWARDS_1315
+    elif year == '2018' or year == '2019':
+        currAwards = OFFICIAL_AWARDS_1819
+    for i in currAwards:
+        temp = getNominee(i, winners[i], tweetThisYear)
+        res[i] = temp
+    res['cecil b. demille award'] = []
+    return res
+
+
+# ==============================NOMINEES========================================
 # Autograder
-OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
-OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
+OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama',
+                        'best performance by an actress in a motion picture - drama',
+                        'best performance by an actor in a motion picture - drama',
+                        'best motion picture - comedy or musical',
+                        'best performance by an actress in a motion picture - comedy or musical',
+                        'best performance by an actor in a motion picture - comedy or musical',
+                        'best animated feature film', 'best foreign language film',
+                        'best performance by an actress in a supporting role in a motion picture',
+                        'best performance by an actor in a supporting role in a motion picture',
+                        'best director - motion picture', 'best screenplay - motion picture',
+                        'best original score - motion picture', 'best original song - motion picture',
+                        'best television series - drama',
+                        'best performance by an actress in a television series - drama',
+                        'best performance by an actor in a television series - drama',
+                        'best television series - comedy or musical',
+                        'best performance by an actress in a television series - comedy or musical',
+                        'best performance by an actor in a television series - comedy or musical',
+                        'best mini-series or motion picture made for television',
+                        'best performance by an actress in a mini-series or motion picture made for television',
+                        'best performance by an actor in a mini-series or motion picture made for television',
+                        'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television',
+                        'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
+OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy',
+                        'best performance by an actress in a motion picture - drama',
+                        'best performance by an actor in a motion picture - drama',
+                        'best performance by an actress in a motion picture - musical or comedy',
+                        'best performance by an actor in a motion picture - musical or comedy',
+                        'best performance by an actress in a supporting role in any motion picture',
+                        'best performance by an actor in a supporting role in any motion picture',
+                        'best director - motion picture', 'best screenplay - motion picture',
+                        'best motion picture - animated', 'best motion picture - foreign language',
+                        'best original score - motion picture', 'best original song - motion picture',
+                        'best television series - drama', 'best television series - musical or comedy',
+                        'best television limited series or motion picture made for television',
+                        'best performance by an actress in a limited series or a motion picture made for television',
+                        'best performance by an actor in a limited series or a motion picture made for television',
+                        'best performance by an actress in a television series - drama',
+                        'best performance by an actor in a television series - drama',
+                        'best performance by an actress in a television series - musical or comedy',
+                        'best performance by an actor in a television series - musical or comedy',
+                        'best performance by an actress in a supporting role in a series, limited series or motion picture made for television',
+                        'best performance by an actor in a supporting role in a series, limited series or motion picture made for television',
+                        'cecil b. demille award']
+
 
 def get_hosts(year):
     '''Hosts is a list of one or more strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
     # cleanedTweets = tweetsCleaner(readDBIntoTweetList('gg2013'))
-    return findHost()
+    return findHost(year)
+
 
 def get_awards(year):
     '''Awards is a list of strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
-    return findawardsname()
+    return findawardsname(year)
+
 
 def get_nominees(year):
     '''Nominees is a dictionary with the hard coded award
     names as keys, and each entry a list of strings. Do NOT change
     the name of this function or what it returns.'''
     # Your code here
-    res = {}
-    if year == '2013' or year == '2015':
-        for award in OFFICIAL_AWARDS_1315:
-            res[award] = ''
-    if year == '2018' or year == '2019':
-        for award in OFFICIAL_AWARDS_1819:
-            res[award] = ''
-    return res
+    return findNominees('2013')
+
 
 def get_winner(year):
     '''Winners is a dictionary with the hard coded award
@@ -449,6 +702,27 @@ def get_winner(year):
     Do NOT change the name of this function or what it returns.'''
     # Your code here
     ############################################# PREPROCESS
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    tweetThisYear = []
+    if year == '2013':
+        if cleanedTweets2013 == []:
+            cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+        tweetThisYear = cleanedTweets2013
+    elif year == '2015':
+        if cleanedTweets2015 == []:
+            cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+        tweetThisYear = cleanedTweets2015
+    elif year == '2018':
+        if cleanedTweets2018 == []:
+            cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+        tweetThisYear = cleanedTweets2018
+    elif year == '2019':
+        if cleanedTweets2019 == []:
+            cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+        tweetThisYear = cleanedTweets2019
     # TF-IDF
     lines = []
     if year == '2013' or year == '2015':
@@ -470,27 +744,16 @@ def get_winner(year):
     res = {}
     # for award in OFFICIAL_AWARDS_1315:
     #     res[award] = ''
-    if year == '2013':
-        for i in range(0, len(lines)):
-            res[lines[i]] = string.capwords(findwinner(cleanedTweets2013, lines, i, word_tfidf, weight))
-    if year == '2015':
-        for i in range(0, len(lines)):
-            res[lines[i]] = string.capwords(findwinner(cleanedTweets2013, lines, i, word_tfidf, weight))
+    for i in range(0, len(lines)):
+        res[lines[i]] = string.capwords(findwinner(tweetThisYear, lines, i, word_tfidf, weight))
+    if not year in ourWinners:
+        ourWinners[year] = res
     return res
 
+
 def get_presenters(year):
-    '''Presenters is a dictionary with the hard coded award
-    names as keys, and each entry a list of strings. Do NOT change the
-    name of this function or what it returns.'''
-    # Your code here
-    # res = {}
-    # if year == '2013' or year == '2015':
-    #     for award in OFFICIAL_AWARDS_1315:
-    #         res[award] = ''
-    # if year == '2018' or year == '2019':
-    #     for award in OFFICIAL_AWARDS_1819:
-    #         res[award] = ''
-    return findPresenter()
+    return findPresenter(year)
+
 
 def pre_ceremony():
     '''This function loads/fetches/processes any data your program
@@ -498,8 +761,97 @@ def pre_ceremony():
     plain text file. It is the first thing the TA will run when grading.
     Do NOT change the name of this function or what it returns.'''
     # Your code here
+    # Load Tweets
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    global sentDetector
+    global tweetTokenizer
+    global keywords
+    global nominee_keywords
+    global customizedStopwords
+    global stopwordlist
+    global keywordsCleanerRE
+    global retweetCleanerRE
+    global datapath
+    global spacyNLP
+    global OFFICIAL_AWARDS_1315
+    global OFFICIAL_AWARDS_1819
+    cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+    # cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+    cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+    cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+
+    sentDetector = nltk.data.load('tokenizers/punkt/english.pickle')
+    # tweet tokenizer
+    tweetTokenizer = TweetTokenizer()
+
+    # Keywords && stopwords
+    keywords = ['hosting', "host", "hosts", 'won', 'best', 'winner', 'wins', 'presented', 'presenter', 'dressed',
+                'dress', 'best-dressed',
+                'suit', 'win', 'limited']
+    nominee_keywords = ['nominee', 'nominees', 'who', 'which']
+    customizedStopwords = ['golden', 'globe', 'globes', 'goldenglobes', 'goldenglobe', '-']
+    stopwordlist = set(stopwords.words('english'))
+    for cstopword in customizedStopwords:
+        stopwordlist.add(cstopword)
+    ## RE
+    keywordsCleanerRE = re.compile("|".join(stopwordlist), re.IGNORECASE)
+    retweetCleanerRE = re.compile('RT', re.IGNORECASE)
+
+    datapath = os.path.abspath(os.path.dirname(os.getcwd())) + '/data'
+
+    # SpaCy
+    spacyNLP = spacy.load('en')
+
+    OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama',
+                            'best performance by an actress in a motion picture - drama',
+                            'best performance by an actor in a motion picture - drama',
+                            'best motion picture - comedy or musical',
+                            'best performance by an actress in a motion picture - comedy or musical',
+                            'best performance by an actor in a motion picture - comedy or musical',
+                            'best animated feature film', 'best foreign language film',
+                            'best performance by an actress in a supporting role in a motion picture',
+                            'best performance by an actor in a supporting role in a motion picture',
+                            'best director - motion picture', 'best screenplay - motion picture',
+                            'best original score - motion picture', 'best original song - motion picture',
+                            'best television series - drama',
+                            'best performance by an actress in a television series - drama',
+                            'best performance by an actor in a television series - drama',
+                            'best television series - comedy or musical',
+                            'best performance by an actress in a television series - comedy or musical',
+                            'best performance by an actor in a television series - comedy or musical',
+                            'best mini-series or motion picture made for television',
+                            'best performance by an actress in a mini-series or motion picture made for television',
+                            'best performance by an actor in a mini-series or motion picture made for television',
+                            'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television',
+                            'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
+    OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy',
+                            'best performance by an actress in a motion picture - drama',
+                            'best performance by an actor in a motion picture - drama',
+                            'best performance by an actress in a motion picture - musical or comedy',
+                            'best performance by an actor in a motion picture - musical or comedy',
+                            'best performance by an actress in a supporting role in any motion picture',
+                            'best performance by an actor in a supporting role in any motion picture',
+                            'best director - motion picture', 'best screenplay - motion picture',
+                            'best motion picture - animated', 'best motion picture - foreign language',
+                            'best original score - motion picture', 'best original song - motion picture',
+                            'best television series - drama', 'best television series - musical or comedy',
+                            'best television limited series or motion picture made for television',
+                            'best performance by an actress in a limited series or a motion picture made for television',
+                            'best performance by an actor in a limited series or a motion picture made for television',
+                            'best performance by an actress in a television series - drama',
+                            'best performance by an actor in a television series - drama',
+                            'best performance by an actress in a television series - musical or comedy',
+                            'best performance by an actor in a television series - musical or comedy',
+                            'best performance by an actress in a supporting role in a series, limited series or motion picture made for television',
+                            'best performance by an actor in a supporting role in a series, limited series or motion picture made for television',
+                            'cecil b. demille award']
+
     print("Pre-ceremony processing complete.")
     return
+
 
 def main():
     '''This function calls your program. Typing "python gg_api.py"
@@ -508,10 +860,11 @@ def main():
     run when grading. Do NOT change the name of this function or
     what it returns.'''
     # Your code here
-    pre_ceremony()
+    # pre_ceremony()
+    print(get_presenters('2013'))
     return
 
+
 if __name__ == '__main__':
+    pre_ceremony()
     main()
-
-
