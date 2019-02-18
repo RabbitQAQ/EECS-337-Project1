@@ -7,16 +7,12 @@ from collections import Counter
 
 import nltk
 import spacy
-import json
-import numpy as np
-from gensim.models import word2vec
+
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 
-from utils import Utils
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
-from nltk.util import ngrams
 
 cnt = 0
 ## Tokenizers
@@ -57,24 +53,6 @@ datapath = os.path.abspath(os.path.dirname(os.getcwd())) + '/data'
 
 # SpaCy
 spacyNLP = spacy.load('en')
-
-
-def tweetsCleaner(tweetList):
-    cleanedTweetList = []
-    cnt = 0
-    for tweet in tweetList:
-        cnt += 1
-        print(cnt)
-        sentences = sentDetector.tokenize(tweet.get_text())
-        if not retweetCleanerRE.search(sentences[0]):
-            for s in sentences:
-                if keywordsCleanerRE.search(s):
-                    cleanedTweet = re.sub("[^a-zA-Z0-9-, ]", "", tweet.get_text())
-                    cleanedTweetList.append(cleanedTweet)
-                break
-
-    return cleanedTweetList
-
 
 def award_classifier(tweet_tokens, award_categories, aw):
     best_score = 0
@@ -496,8 +474,8 @@ def findPresenter(year):
 
 # ==============================NOMINEES START========================================
 
-def findNamesMoreThanN(tweet, threshhold):
-    blacklist = ['golden', 'best', 'globe', 'motion', 'actor', 'actress', 'hero', 'picture', 'drama']
+def findNamesMoreThanN(tweet, threshold):
+    blackWords = ['golden', 'best', 'globe', 'motion', 'actor', 'actress', 'hero', 'picture', 'drama']
     sum = 0
     names = {}
     document = ' '.join([i for i in tweet.split()])
@@ -509,7 +487,7 @@ def findNamesMoreThanN(tweet, threshhold):
                 if chunk.label() == 'PERSON':
                     result = []
                     for c in chunk[0:4]:
-                        if c[0].lower() in blacklist:
+                        if c[0].lower() in blackWords:
                             break
                         else:
                             result.append(c[0])
@@ -521,14 +499,14 @@ def findNamesMoreThanN(tweet, threshhold):
                             names[temp.lower()] = 1
                         else:
                             names[temp.lower()] += 1
-    if sum >= threshhold:
+    if sum >= threshold:
         return names
     return []
 
 def searchNomineesMovie(winner, tweets):
     winner = winner.lower()
     moviedic = {}
-    with open('../data/MovieDatabase.txt', encoding='utf-16') as file:
+    with open('../data/MovieNameLib.txt', encoding='utf-16') as file:
         for i in file.read().split('\n'):
             try:
                 k = i
@@ -624,6 +602,117 @@ def findNominees(year):
 
 
 # ==============================NOMINEES========================================
+# ==============================FUN GOALS START=================================
+def get_fun_goals(year):
+    global cleanedTweets2013
+    global cleanedTweets2015
+    global cleanedTweets2018
+    global cleanedTweets2019
+    tweetThisYear = []
+    if year == '2013':
+        if cleanedTweets2013 == []:
+            cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
+        tweetThisYear = cleanedTweets2013
+    elif year == '2015':
+        if cleanedTweets2015 == []:
+            cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
+        tweetThisYear = cleanedTweets2015
+    elif year == '2018':
+        if cleanedTweets2018 == []:
+            cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
+        tweetThisYear = cleanedTweets2018
+    elif year == '2019':
+        if cleanedTweets2019 == []:
+            cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
+        tweetThisYear = cleanedTweets2019
+    # Start
+    spacyNLP = spacy.load('en')
+    res = {}
+    whosaid = {}
+    bestdressedone = {}
+    ans = []
+    k = 10
+    jokeword =['joke', 'lmao', 'lol', 'hhh', 'funny', '233']
+    bestdressword = ['bestdress', 'best dress','best-dress']
+    blacklist = ['best', 'dress', 'red', 'carpet', 'dressed']
+    for tweet in tweetThisYear:
+        if retweetCleanerRE.search(tweet):
+            continue
+        tweet_l = tweet.lower().replace(',', '')
+
+        for bw in bestdressword:
+            if bw in tweet_l:
+                entities = spacyNLP(tweet)
+                for entity in entities.ents:
+                    if entity.label_ == "PERSON":
+                        if len(entity.text.split()) == 2:
+
+                            if entity.text in bestdressedone:
+                                bestdressedone[entity.text] += 1
+                            else:
+                                bestdressedone[entity.text] = 1
+
+        for jw in jokeword:
+            if jw in tweet_l:
+                tokens = tweetTokenizer.tokenize(tweet_l)
+                usefulTokens = [w for w in tokens if not w in customizedStopwords]
+                for who in nltk.ngrams(usefulTokens, 2):
+                    if who in whosaid:
+                        whosaid[who] += 1
+                    else:
+                        whosaid[who] = 1
+
+
+
+                for joke in nltk.ngrams(usefulTokens, k):
+                    if joke in res:
+                        res[joke] += 1
+                    else:
+                        res[joke] = 1
+    sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
+    whosaid = sorted(whosaid.items(), key=lambda entry: entry[1], reverse=True)
+    bestdressedone = sorted(bestdressedone.items(), key=lambda entry: entry[1], reverse=True)
+
+    start = 1
+    flag = 0
+    temp_joke = []
+    for i in range (0, len(sortedDict) - 1):
+        if flag == 0:
+            start = 1
+            if len(temp_joke) != 0:
+                joketonight = ''
+                for word in temp_joke:
+                    joketonight += word + ' '
+                ans.append(joketonight)
+
+            temp_joke = []
+        if flag == 1:
+            start == 0
+        if start == 1:
+            for tw in sortedDict[i][0]:
+                temp_joke.append(tw)
+
+            start = 0
+            flag = 1
+
+        for j in range (1, k):
+            if sortedDict[i][0][j] != sortedDict[i + 1][0][j - 1] or sortedDict[i + 1][1] < 5:
+                flag = 0
+
+
+        if flag == 1:
+             temp_joke.append(sortedDict[i + 1][0][k - 1])
+
+    who = whosaid[0][0][0] + ' ' + whosaid[0][0][1]
+    best_dressed = []
+    for bd in bestdressedone[0:15]:
+        temp0 = bd[0].split()
+
+        best_dressed.append(temp0[0] + ' ' + temp0[1])
+
+
+    return ans[0], who, best_dressed
+# ==============================FUN GOALS=======================================
 # Autograder
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama',
                         'best performance by an actress in a motion picture - drama',
@@ -762,97 +851,6 @@ def pre_ceremony():
     plain text file. It is the first thing the TA will run when grading.
     Do NOT change the name of this function or what it returns.'''
     # Your code here
-    # Load Tweets
-    # global cleanedTweets2013
-    # global cleanedTweets2015
-    # global cleanedTweets2018
-    # global cleanedTweets2019
-    # global sentDetector
-    # global tweetTokenizer
-    # global keywords
-    # global nominee_keywords
-    # global customizedStopwords
-    # global stopwordlist
-    # global keywordsCleanerRE
-    # global retweetCleanerRE
-    # global datapath
-    # global spacyNLP
-    # global OFFICIAL_AWARDS_1315
-    # global OFFICIAL_AWARDS_1819
-    # global cnt
-    # cnt = 0
-    # cleanedTweets2013 = readJsonIntoTweetListToString(FILEPATH_2013)
-    # # cleanedTweets2015 = readJsonIntoTweetListToString(FILEPATH_2015)
-    # cleanedTweets2018 = readJsonIntoTweetListToString(FILEPATH_2018)
-    # cleanedTweets2019 = readJsonIntoTweetListToString(FILEPATH_2019)
-    #
-    # sentDetector = nltk.data.load('tokenizers/punkt/english.pickle')
-    # # tweet tokenizer
-    # tweetTokenizer = TweetTokenizer()
-    #
-    # # Keywords && stopwords
-    # keywords = ['hosting', "host", "hosts", 'won', 'best', 'winner', 'wins', 'presented', 'presenter', 'dressed',
-    #             'dress', 'best-dressed',
-    #             'suit', 'win', 'limited']
-    # nominee_keywords = ['nominee', 'nominees', 'who', 'which']
-    # customizedStopwords = ['golden', 'globe', 'globes', 'goldenglobes', 'goldenglobe', '-']
-    # stopwordlist = set(stopwords.words('english'))
-    # for cstopword in customizedStopwords:
-    #     stopwordlist.add(cstopword)
-    # ## RE
-    # keywordsCleanerRE = re.compile("|".join(stopwordlist), re.IGNORECASE)
-    # retweetCleanerRE = re.compile('RT', re.IGNORECASE)
-    #
-    # datapath = os.path.abspath(os.path.dirname(os.getcwd())) + '/data'
-    #
-    # # SpaCy
-    # spacyNLP = spacy.load('en')
-    #
-    # OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama',
-    #                         'best performance by an actress in a motion picture - drama',
-    #                         'best performance by an actor in a motion picture - drama',
-    #                         'best motion picture - comedy or musical',
-    #                         'best performance by an actress in a motion picture - comedy or musical',
-    #                         'best performance by an actor in a motion picture - comedy or musical',
-    #                         'best animated feature film', 'best foreign language film',
-    #                         'best performance by an actress in a supporting role in a motion picture',
-    #                         'best performance by an actor in a supporting role in a motion picture',
-    #                         'best director - motion picture', 'best screenplay - motion picture',
-    #                         'best original score - motion picture', 'best original song - motion picture',
-    #                         'best television series - drama',
-    #                         'best performance by an actress in a television series - drama',
-    #                         'best performance by an actor in a television series - drama',
-    #                         'best television series - comedy or musical',
-    #                         'best performance by an actress in a television series - comedy or musical',
-    #                         'best performance by an actor in a television series - comedy or musical',
-    #                         'best mini-series or motion picture made for television',
-    #                         'best performance by an actress in a mini-series or motion picture made for television',
-    #                         'best performance by an actor in a mini-series or motion picture made for television',
-    #                         'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television',
-    #                         'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
-    # OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy',
-    #                         'best performance by an actress in a motion picture - drama',
-    #                         'best performance by an actor in a motion picture - drama',
-    #                         'best performance by an actress in a motion picture - musical or comedy',
-    #                         'best performance by an actor in a motion picture - musical or comedy',
-    #                         'best performance by an actress in a supporting role in any motion picture',
-    #                         'best performance by an actor in a supporting role in any motion picture',
-    #                         'best director - motion picture', 'best screenplay - motion picture',
-    #                         'best motion picture - animated', 'best motion picture - foreign language',
-    #                         'best original score - motion picture', 'best original song - motion picture',
-    #                         'best television series - drama', 'best television series - musical or comedy',
-    #                         'best television limited series or motion picture made for television',
-    #                         'best performance by an actress in a limited series or a motion picture made for television',
-    #                         'best performance by an actor in a limited series or a motion picture made for television',
-    #                         'best performance by an actress in a television series - drama',
-    #                         'best performance by an actor in a television series - drama',
-    #                         'best performance by an actress in a television series - musical or comedy',
-    #                         'best performance by an actor in a television series - musical or comedy',
-    #                         'best performance by an actress in a supporting role in a series, limited series or motion picture made for television',
-    #                         'best performance by an actor in a supporting role in a series, limited series or motion picture made for television',
-    #                         'cecil b. demille award']
-    #
-    # print("Pre-ceremony processing complete.")
     return
 
 def parseHumanReadableResult(result, functionName):
@@ -892,6 +890,16 @@ def parseHumanReadableResult(result, functionName):
                 nameStr += name + '| '
             print(k + ": " + nameStr)
         print("#===============================")
+    elif functionName == "fungoals":
+        print("#===============================")
+        print("Fun Goals: ")
+        print("Best Joke: " + result[0])
+        print("Best Joke Teller: " + result[1])
+        bestDressedNames = "| "
+        for name in result[2]:
+            bestDressedNames += name + "| "
+        print("Best Dressed People: " + bestDressedNames)
+        print("#===============================")
 
 def main():
     '''This function calls your program. Typing "python gg_api.py"
@@ -914,6 +922,7 @@ def main():
               "\n3. Get Nominees"
               "\n4. Get Winners"
               "\n5. Get Presenters"
+              "\n6. Get Fun Goals(Best Joke, Best Joke Teller, Best Dressed People)"
               "\n")
         user_input = input("Choose a function: ")
         if (user_input == '1'):
@@ -926,6 +935,8 @@ def main():
             parseHumanReadableResult(get_winner(year), "winners")
         elif (user_input == '5'):
             parseHumanReadableResult(get_presenters(year), "presenters")
+        elif (user_input == '6'):
+            parseHumanReadableResult(get_fun_goals(year), "fungoals")
         else:
             print("Invalid Choice")
 

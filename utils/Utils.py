@@ -40,13 +40,13 @@ def readDBIntoTweetList(collectionName):
 
 def readJsonIntoTweetList(filepath):
     res = []
-    cnt = 0
+    #cnt = 0
     try:
         with open(filepath) as jsonfile:
             data = json.loads(jsonfile.read())
             for item in data:
-                cnt += 1
-                print(cnt)
+                #cnt += 1
+                #print(cnt)
                 tmpTweet = Tweet(re.sub("[^a-zA-Z0-9-, ]", "", item['text']), item['timestamp_ms'], item['user']['id'], item['user']['screen_name'],
                                  item['id'])
                 res.append(tmpTweet)
@@ -60,13 +60,13 @@ def readJsonIntoTweetList(filepath):
 
 def readJsonIntoTweetListToString(filepath):
     res = []
-    cnt = 0
+    #cnt = 0
     try:
         with open(filepath) as jsonfile:
             data = json.loads(jsonfile.read())
             for item in data:
-                cnt += 1
-                print(cnt)
+                #cnt += 1
+                #print(cnt)
                 res.append(re.sub("[^a-zA-Z0-9-, ]", "", item['text']))
     except:
         print("Read Json Into List: Operation Failed(" + filepath+ ")")
@@ -102,6 +102,13 @@ def tsv_parser(filepath):
                 if deathYear == '\\N' and row['primaryName'] != prevName:
                     newfile.write(row['primaryName'] + '\n')
                     prevName = row['primaryName']
+
+def tsv_parser_movie(filepath):
+    with open('../data/new_name.txt', 'a') as newfile:
+        with open(filepath) as tsvfile:
+            reader = csv.DictReader(tsvfile)
+            for row in reader:
+                newfile.write(row['original_title'] + '\n')
 
 def find_name(name):
     res = []
@@ -141,5 +148,7 @@ if __name__ == '__main__':
     #tsv_parser('../data/name.basics.tsv')
 
     #print(find_most_similar('Dssd Edasdas'))
-    readJsonIntoTweetListToString('../data/gg2015.json')
-    print("fuck")
+    # readJsonIntoTweetListToString('../data/gg2015.json')
+    # print("fuck")
+
+    tsv_parser_movie('../data/tmdb_5000_movies.csv')
