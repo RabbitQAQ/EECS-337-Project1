@@ -3,11 +3,11 @@
 import re
 import os
 import string
-from collections import Counter
 
 import nltk
 import spacy
 
+from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 
