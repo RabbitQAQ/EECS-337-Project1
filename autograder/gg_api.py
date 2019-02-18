@@ -912,7 +912,7 @@ def main():
     validYears = ['2013', '2015', '2018', '2019']
     while True:
         print("\n")
-        year = input("Which year: ")
+        year = input("Input the year you want to query: ")
         if not year in validYears:
             print("Invalid Year")
             continue
