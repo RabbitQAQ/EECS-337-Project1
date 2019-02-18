@@ -1,6 +1,7 @@
 import re
 import os
 import nltk
+import spacy
 import numpy as np
 from gensim.models import word2vec
 from sklearn.feature_extraction.text import CountVectorizer
@@ -151,14 +152,37 @@ def findawardsname():
 
 
 def getjoke():
+    spacyNLP = spacy.load('en')
     res = {}
     whosaid = {}
+    bestdressedone = {}
     ans = []
     k = 10
     jokeword =['joke', 'lmao', 'lol', 'hhh', 'funny', '233']
-
+    bestdressword = ['bestdress', 'best dress','best-dress']
+    blacklist = ['best', 'dress', 'red', 'carpet', 'dressed']
     for tweet in cleanedTweetList:
         tweet_l = tweet.lower()
+
+        for bw in bestdressword:
+            if bw in tweet_l:
+                entities = spacyNLP(tweet)
+                for entity in entities.ents:
+                    if entity.label_ == "PERSON":
+                        if len(entity.text.split()) == 2:
+
+                            if entity.text in bestdressedone:
+                                bestdressedone[entity.text] += 1
+                            else:
+                                bestdressedone[entity.text] = 1
+                # b_tokens = tweetTokenizer.tokenize(tweet_l)
+                # b_usefulTokens = [w for w in b_tokens if not w in stopwordlist and not w in blacklist]
+                # for bestdress in nltk.ngrams(b_usefulTokens, 2):
+                #     if bestdress in bestdressedone:
+                #         bestdressedone[bestdress] += 1
+                #     else:
+                #         bestdressedone[bestdress] = 1
+
         for jw in jokeword:
             if jw in tweet_l:
                 tokens = tweetTokenizer.tokenize(tweet_l)
@@ -169,6 +193,8 @@ def getjoke():
                     else:
                         whosaid[who] = 1
 
+
+
                 for joke in nltk.ngrams(usefulTokens, k):
                     if joke in res:
                         res[joke] += 1
@@ -176,6 +202,7 @@ def getjoke():
                         res[joke] = 1
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     whosaid = sorted(whosaid.items(), key=lambda entry: entry[1], reverse=True)
+    bestdressedone = sorted(bestdressedone.items(), key=lambda entry: entry[1], reverse=True)
 
     start = 1
     flag = 0
@@ -210,11 +237,16 @@ def getjoke():
     who = whosaid[0][0][0] + ' ' + whosaid[0][0][1]
 
 
-    return ans[0], who
 
-ans, who = getjoke()
+    return ans[0], who, bestdressedone
+
+ans, who, best_dress = getjoke()
 
 
 print(ans)
 print(who)
+print(best_dress)
+
+
+
 
