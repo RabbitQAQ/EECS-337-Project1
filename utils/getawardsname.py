@@ -235,10 +235,17 @@ def getjoke():
              temp_joke.append(sortedDict[i + 1][0][k - 1])
 
     who = whosaid[0][0][0] + ' ' + whosaid[0][0][1]
+    best_dressed = []
+    for bd in bestdressedone[0:15]:
+        temp0 = bd[0].split()
+
+        best_dressed.append(temp0[0] + ' ' + temp0[1])
 
 
 
-    return ans[0], who, bestdressedone
+    return ans[0], who, best_dressed
+
+
 
 ans, who, best_dress = getjoke()
 
