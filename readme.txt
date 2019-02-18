@@ -13,4 +13,6 @@ INSTRUCTION
     nltk.download('maxent_ne_chunker')
     nltk.download('words')
 
+3. Put gg2013.json/gg2015.json/gg2018.json/gg2019.json into /data folder. (They are huge so we don't upload it)
+
 3. run /autograder/gg_api.py and /autograder/autograder.py
