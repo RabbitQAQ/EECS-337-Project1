@@ -380,7 +380,7 @@ def findawardsname(year):
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
 
     trueResult = []
-    for i in range(0, 24):
+    for i in range(0, 23):
         trueResult.append(sortedDict[i][0])
 
     print("End Getting Awards Of " + year)
@@ -495,17 +495,14 @@ def findPresenter(year):
 
 
 # ==============================NOMINEES START========================================
-def sentenceTokenizer(document):
-    document = ' '.join([i for i in document.split()])
-    sentences = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(document)]
-    sentences = [nltk.pos_tag(sent) for sent in sentences]
-    return sentences
 
 def findNamesMoreThanN(tweet, threshhold):
     blacklist = ['golden', 'best', 'globe', 'motion', 'actor', 'actress', 'hero', 'picture', 'drama']
     sum = 0
     names = {}
-    sentences = sentenceTokenizer(tweet)
+    document = ' '.join([i for i in tweet.split()])
+    sentences = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(document)]
+    sentences = [nltk.pos_tag(sent) for sent in sentences]
     for tagged_sentence in sentences:
         for chunk in nltk.ne_chunk(tagged_sentence):
             if type(chunk) == nltk.tree.Tree:
@@ -545,9 +542,9 @@ def searchNomineesMovie(winner, tweets):
     for tweet in tweets:
         if winner in tweet.lower():
             token = nltk.word_tokenize(tweet.lower())
-            bigrams = nltk.ngrams(token, 2)
-            trigrams = nltk.ngrams(token, 3)
-            btCounter = Counter(bigrams) + Counter(trigrams)
+            bi = nltk.ngrams(token, 2)
+            tri = nltk.ngrams(token, 3)
+            btCounter = Counter(bi) + Counter(tri)
             for bt in btCounter.most_common(50):
                 tmpName = ' '.join(k for k in bt[0]).lower()
                 if 'the' in tmpName and len(tmpName.split()) < 3:
@@ -564,8 +561,10 @@ def searchNomineesMovie(winner, tweets):
     return names
 
 
-def searchNominees(award, winner, tweets):
-    if 'actor' in award or 'actress' in award or 'performance' in award or 'director' in award or 'award' in award:
+def searchNominees(awardwords, winner, tweets):
+
+    if 'actor' in awardwords or 'actress' in awardwords or 'director' in awardwords or 'srceenplay' in awardwords or 'cecil' in awardwords or 'score' in awardwords:
+
         for tweet in tweets:
             if winner.lower() in tweet.lower():
                 nameList = findNamesMoreThanN(tweet, 5)
