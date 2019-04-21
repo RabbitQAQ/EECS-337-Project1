@@ -2,6 +2,7 @@ import re
 import os
 import string
 
+
 import nltk
 import json
 import numpy as np
@@ -24,6 +25,7 @@ keywords = ['hosting', "host", "hosts", 'won', 'best', 'winner', 'wins', 'presen
 nominee_keywords = ['nominee', 'nominees', 'who', 'which']
 customizedStopwords = ['golden', 'globe', 'globes', 'goldenglobes', 'goldenglobe', '-']
 stopwordlist = set(stopwords.words('english'))
+
 for cstopword in customizedStopwords:
     stopwordlist.add(cstopword)
 ## RE
@@ -45,7 +47,7 @@ def tweetsCleaner(tweetList):
         if not retweetCleanerRE.search(sentences[0]):
             for s in sentences:
                 if keywordsCleanerRE.search(s):
-                    cleanedTweet = re.sub("[^a-zA-Z0-9 ]", "", tweet.get_text())
+                    cleanedTweet = re.sub("[^a-zA-Z0-9- ]", "", tweet.get_text())
                     cleanedTweetList.append(cleanedTweet)
 
     return cleanedTweetList
@@ -81,7 +83,7 @@ for wi in range (0, len(weight[0])):
         if weight[wj][wi] != 0:
             count += 1
             temp = wj
-    if count == 1:
+    if count <= 1:
         weight[temp][wi] *= 10
 
 def findHost():
@@ -105,6 +107,28 @@ def findHost():
 
 #print(findHost())
 
+def award_classifier(tweet_tokens, award_categories, aw):
+    best_score = 0
+    best_category = ""
+    for award in award_categories:
+        awardstring = award.lower()
+
+        awardWords = [w for w in tweetTokenizer.tokenize(awardstring) if not w in stopwordlist]
+        score = num_matches(awardWords, tweet_tokens)
+        if score > best_score and score > 0:
+            best_score = score
+            best_category = award
+
+        if best_category == aw:
+            return True
+    return False
+
+def num_matches(list1, list2):
+    matches = 0
+    for item in list1:
+        matches += list2.count(item)
+    return matches
+
 def findwinner(i):
     file = open(datapath +"/AwardCategories2013.txt")
     lines = file.read().split("\n")
@@ -113,6 +137,7 @@ def findwinner(i):
     if len(string) == 1:
         string.append(" ")
     awardString = line
+
     catagoryString = string[1]
     awardstring = awardString.lower()
     awardstring = awardstring.replace('limited', 'mini')
@@ -123,6 +148,7 @@ def findwinner(i):
     # awardWords = tweetTokenizer.tokenize(awardstring)
     # categorywords = tweetTokenizer.tokenize(catagorystring)
     awardWords = [w for w in tweetTokenizer.tokenize(awardstring) if not w in stopwordlist]
+    awardWordsbig = [w for w in tweetTokenizer.tokenize(awardstring)]
     categorywords = [w for w in tweetTokenizer.tokenize(catagorystring) if not w in stopwordlist]
     if len(categorywords) == 0:
         categorywords.append(" ")
@@ -131,13 +157,13 @@ def findwinner(i):
     sortedDict = {}
 
     if len(awardWords) >= 8:
-        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 3)
+        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 1, line)
 
     if len(awardWords) < 8 or len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 2)
+        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 2, line)
 
     if len(sortedDict) == 0:
-        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 1)
+        sortedDict = findWinnerInNgrams(i, awardWords, categorywords, 1, line)
 
 
     winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1]
@@ -160,7 +186,7 @@ def findwinner(i):
 
     if Ismovie == 1:
         if diff < 0.10 and sortedDict[0][0][0] == sortedDict[1][0][1]:
-            winner = sortedDict[1][0][0] + ' ' + sortedDict[1][0][1] + ' ' + sortedDict[0][0][1]
+            winner = sortedDict[1][0][0] + ' '  + sortedDict[1][0][1] + ' ' + sortedDict[0][0][1]
         if diff < 0.10 and sortedDict[1][0][0] == sortedDict[0][0][1]:
             winner = sortedDict[0][0][0] + ' ' + sortedDict[0][0][1] + ' ' + sortedDict[1][0][1]
         if sortedDict[0][0][0] == 'wins' or sortedDict[0][0][0] == 'goes' or sortedDict[0][0][0] == 'movie' or sortedDict[0][0][0] == 'flim':
@@ -172,7 +198,7 @@ def findwinner(i):
     return winner
 
 
-def findWinnerInNgrams(i, awardWords, categoryWords, n):
+def findWinnerInNgrams(i, awardWords, categoryWords, n, line):
     res = {}
 
     for tweet in cleanedTweetList:
@@ -198,21 +224,22 @@ def findWinnerInNgrams(i, awardWords, categoryWords, n):
 
                         tokens = tweetTokenizer.tokenize(tweet_l)
                         usefulTokens = [w for w in tokens if not w in stopwordlist]
-                        aw_pos = []
-                        for tw in aw:
-                            try:
-                                aw_pos.append(word_tfidf.index(tw))
-                            except:
-                                aw_pos.append(0)
-                        for k in nltk.bigrams(usefulTokens):
-                            if k[0] not in awardWords and k[1] not in awardWords:
-                                sum = 1
-                                for tp in aw_pos:
-                                    sum *= weight[i][tp]
-                                if k in res:
-                                    res[k] += sum
-                                else:
-                                    res[k] = sum
+                        if award_classifier(usefulTokens, lines, line):
+                            aw_pos = []
+                            for tw in aw:
+                                try:
+                                    aw_pos.append(word_tfidf.index(tw))
+                                except:
+                                    aw_pos.append(0)
+                            for k in nltk.bigrams(usefulTokens):
+                                if k[0] not in awardWords and k[1] not in awardWords:
+                                    sum = 1
+                                    for tp in aw_pos:
+                                        sum *= weight[i][tp]
+                                    if k in res:
+                                        res[k] += sum
+                                    else:
+                                        res[k] = sum
 
     sortedDict = sorted(res.items(), key=lambda entry: entry[1], reverse=True)
     # sortedDictname = sorted(name.items(), key=lambda entry: entry[1], reverse=True)
@@ -239,8 +266,8 @@ def findWinnerInNgrams(i, awardWords, categoryWords, n):
     return sortedDict
 
 
-# for i in range (0, 26):
-#     print(findwinner(i))
+for i in range (0, 26):
+    print(findwinner(i))
 
 def generateJson():
     # TODO use true award name
@@ -259,7 +286,7 @@ def generateJson():
 
     return json.dumps(jsonData)
 
-print(generateJson())
+# print(generateJson())
 # name = {}
 # name_final = []
 # wordtovec = []
